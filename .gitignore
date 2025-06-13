@@ -1,6 +1,7 @@
 ﻿# Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.class
 *.so
 .Python
@@ -23,6 +24,7 @@ data/models/*.pth
 data/models/*.bin
 *.db
 .DS_Store
+aisec_scanner.db
 
 # Testing
 .pytest_cache/
@@ -35,3 +37,9 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Temporary files
+fix_temp.txt
+display_fix.py
+demo_*.py
+test_*.py
