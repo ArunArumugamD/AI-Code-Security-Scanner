@@ -20,7 +20,7 @@ Enterprise-grade code security scanner combining Graph Neural Networks and CodeB
 ## Getting Started
 1. Install dependencies: pip install -r requirements.txt
 2. Configure database: Update .env file
-3. Run migrations: lembic upgrade head
+3. Run migrations: alembic upgrade head
 4. Start server: uvicorn src.api.main:app --reload
 
 ## Why This Stands Out
