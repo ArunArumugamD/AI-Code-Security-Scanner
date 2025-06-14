@@ -39,6 +39,9 @@ ai_imports_fix.txt
 # Test files to exclude
 test_setup.py
 test_api_startup.py
+confidence_history.json
+embedding_cache.json
+
 
 # Distribution
 dist/
@@ -50,6 +53,7 @@ data/models/
 *.pth
 *.bin
 embedding_cache.json
+
 
 # Hugging Face cache
 .cache/
