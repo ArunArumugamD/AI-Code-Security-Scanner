@@ -8,6 +8,7 @@ from src.database.models.base import SessionLocal
 from src.database.operations import VulnerabilityDB
 from src.analyzers.parser_analyzer import ParserBasedAnalyzer
 from src.analyzers.pattern_scanner import PatternBasedScanner
+from src.analyzers.ai_analyzer import AIEnhancedAnalyzer
 from src.core.language_detector import LanguageDetector
 
 class EnhancedScannerEngine(ScannerEngine):
@@ -160,3 +161,4 @@ async def quick_scan(code: str, language: str = None) -> List[Vulnerability]:
     engine.register_analyzer(ParserBasedAnalyzer())
     
     return await engine.scan_code(code, language, "quick_scan.tmp")
+
