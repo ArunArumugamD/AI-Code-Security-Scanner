@@ -1,7 +1,6 @@
 ﻿# Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.class
 *.so
 .Python
@@ -20,8 +19,6 @@ venv
 # Project specific
 .env
 *.log
-data/models/*.pth
-data/models/*.bin
 *.db
 .DS_Store
 aisec_scanner.db
@@ -30,16 +27,29 @@ aisec_scanner.db
 .pytest_cache/
 .coverage
 htmlcov/
-.tox/
-*.cover
+
+# Temporary files
+fix_temp.txt
+display_fix.py
+demo_*.py
+scanner_engine_update.txt
+api_ai_endpoint.txt
+ai_imports_fix.txt
+
+# Test files to exclude
+test_setup.py
+test_api_startup.py
 
 # Distribution
 dist/
 build/
 *.egg-info/
 
-# Temporary files
-fix_temp.txt
-display_fix.py
-demo_*.py
-test_*.py
+# Model cache
+data/models/
+*.pth
+*.bin
+embedding_cache.json
+
+# Hugging Face cache
+.cache/
