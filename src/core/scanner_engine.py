@@ -162,3 +162,4 @@ async def quick_scan(code: str, language: str = None) -> List[Vulnerability]:
     
     return await engine.scan_code(code, language, "quick_scan.tmp")
 
+
