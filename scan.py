@@ -5,7 +5,9 @@ import os
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.core.scanner_engine import EnhancedScannerEngine
+
+from src.core.scanner_engine_groq import GroqEnhancedScannerEngine as EnhancedScannerEngine
+from src.analyzers.groq_enhanced_analyzer import GroqEnhancedAnalyzer
 from src.database.models.base import SessionLocal
 from src.database.operations import VulnerabilityDB
 from src.core.base_scanner import Severity

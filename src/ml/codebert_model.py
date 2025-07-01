@@ -188,5 +188,8 @@ class CodeBERTManager:
     
     def __del__(self):
         """Save cache on cleanup"""
-        if hasattr(self, 'embedding_cache'):
-            self._save_cache()
+        if hasattr(self, 'embedding_cache') and self.embedding_cache:
+            try:
+                self._save_cache()
+            except:
+                pass

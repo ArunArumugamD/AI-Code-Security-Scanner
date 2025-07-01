@@ -17,6 +17,7 @@ venv
 *~
 
 # Project specific
+*.env
 .env
 *.log
 *.db
@@ -35,6 +36,11 @@ demo_*.py
 scanner_engine_update.txt
 api_ai_endpoint.txt
 ai_imports_fix.txt
+diagnose_*.py
+debug_*.py
+verify_*.py
+troubleshoot_*.py
+test_all.py
 
 # Test files to exclude
 test_setup.py
@@ -53,7 +59,11 @@ data/models/
 *.pth
 *.bin
 embedding_cache.json
+confidence_history.json
 
 
 # Hugging Face cache
 .cache/
+
+# Groq cache
+data/groq_cache/

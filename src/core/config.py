@@ -2,6 +2,8 @@
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+load_dotenv()
 
 class Settings(BaseSettings):
     # Project paths
@@ -22,7 +24,7 @@ class Settings(BaseSettings):
     CODEBERT_MODEL: str = "microsoft/codebert-base"
     CONFIDENCE_THRESHOLD: float = 0.7
     MAX_FILE_SIZE_MB: int = 10
-    
+    GROQ_API_KEY: str = ""
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"

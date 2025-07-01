@@ -24,70 +24,13 @@ class EnhancedScannerEngine(ScannerEngine):
     
     def _initialize_analyzers(self):
         """Initialize and register all analyzers"""
-        # Base analyzers
-        pattern_scanner = PatternBasedScanner()
-        parser_analyzer = ParserBasedAnalyzer()
+        # Register pattern-based scanner
+        self.register_analyzer(PatternBasedScanner())
         
-        # Check if Groq is available
-        groq_available = False
-        try:
-            from src.ml.groq_analyzer import GroqCloudAnalyzer
-            groq = GroqCloudAnalyzer()
-            groq_available = groq.enabled
-        except Exception as e:
-            print(f"Groq initialization check: {e}")
-            groq_available = False
+        # Register AST-based analyzer
+        self.register_analyzer(ParserBasedAnalyzer())
         
-        if groq_available:
-            # Wrap with Groq enhancement
-            self.register_analyzer(GroqEnhancedAnalyzer(pattern_scanner))
-            self.register_analyzer(GroqEnhancedAnalyzer(parser_analyzer))
-            print("✓ Registered Groq-enhanced analyzers")
-        else:
-            # Use base analyzers
-            self.register_analyzer(pattern_scanner)
-            self.register_analyzer(parser_analyzer)
-            print("✓ Registered base analyzers (Groq not available)")
-        
-        # Try to register AI analyzers
-        try:
-            ai_analyzer = AIEnhancedAnalyzer()
-            if ai_analyzer.ai_ready:
-                if groq_available:
-                    self.register_analyzer(GroqEnhancedAnalyzer(ai_analyzer))
-                else:
-                    self.register_analyzer(ai_analyzer)
-                print("✓ Registered AI analyzer")
-        except Exception as e:
-            print(f"AI analyzer not available: {e}")
-        
-        # Try to register GNN analyzer
-        try:
-            from src.analyzers.gnn_analyzer import GNNStructuralAnalyzer
-            gnn_analyzer = GNNStructuralAnalyzer()
-            if gnn_analyzer.enabled:
-                if groq_available:
-                    self.register_analyzer(GroqEnhancedAnalyzer(gnn_analyzer))
-                else:
-                    self.register_analyzer(gnn_analyzer)
-                print("✓ Registered GNN analyzer")
-        except Exception as e:
-            print(f"GNN analyzer not available: {e}")
-        
-        # Try to register Hybrid analyzer
-        try:
-            from src.analyzers.hybrid_analyzer import HybridAIAnalyzer
-            hybrid_analyzer = HybridAIAnalyzer()
-            if hybrid_analyzer.enabled:
-                if groq_available:
-                    self.register_analyzer(GroqEnhancedAnalyzer(hybrid_analyzer))
-                else:
-                    self.register_analyzer(hybrid_analyzer)
-                print("✓ Registered Hybrid AI analyzer")
-        except Exception as e:
-            print(f"Hybrid analyzer not available: {e}")
-        
-        print(f"✓ Initialized {len(self.analyzers)} analyzers total")
+        print(f"✓ Initialized {len(self.analyzers)} analyzers")
     
     async def start_scan(self, scan_type: str = 'full') -> int:
         """Start a new scan session"""
@@ -165,11 +108,6 @@ class EnhancedScannerEngine(ScannerEngine):
                 existing = unique_vulns[key]
                 if vuln.confidence > existing.confidence:
                     unique_vulns[key] = vuln
-                elif vuln.confidence == existing.confidence:
-                    # If same confidence, merge AI explanations
-                    if vuln.ai_explanation and existing.ai_explanation:
-                        if "Llama 3 70B" in vuln.ai_explanation and "Llama 3 70B" not in existing.ai_explanation:
-                            unique_vulns[key] = vuln
             else:
                 unique_vulns[key] = vuln
         
@@ -220,41 +158,9 @@ async def quick_scan(code: str, language: str = None) -> List[Vulnerability]:
         language = LanguageDetector.detect_from_content(code)
     
     engine = ScannerEngine()
-    
-    # Check if Groq is available for quick scan
-    groq_available = False
-    try:
-        from src.ml.groq_analyzer import GroqCloudAnalyzer
-        groq = GroqCloudAnalyzer()
-        groq_available = groq.enabled
-    except:
-        pass
-    
-    # Register analyzers
-    pattern_scanner = PatternBasedScanner()
-    parser_analyzer = ParserBasedAnalyzer()
-    
-    if groq_available:
-        engine.register_analyzer(GroqEnhancedAnalyzer(pattern_scanner))
-        engine.register_analyzer(GroqEnhancedAnalyzer(parser_analyzer))
-    else:
-        engine.register_analyzer(pattern_scanner)
-        engine.register_analyzer(parser_analyzer)
+    engine.register_analyzer(PatternBasedScanner())
+    engine.register_analyzer(ParserBasedAnalyzer())
     
     return await engine.scan_code(code, language, "quick_scan.tmp")
 
-# Function to test Groq integration
-async def test_groq_integration():
-    """Test if Groq integration is working"""
-    try:
-        from src.ml.groq_analyzer import GroqCloudAnalyzer
-        groq = GroqCloudAnalyzer()
-        if groq.enabled:
-            print("✅ Groq integration is active")
-            return True
-        else:
-            print("⚠️ Groq integration is disabled (no API key)")
-            return False
-    except Exception as e:
-        print(f"❌ Groq integration error: {e}")
-        return False
+
