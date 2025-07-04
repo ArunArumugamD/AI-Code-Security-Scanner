@@ -67,3 +67,7 @@ confidence_history.json
 
 # Groq cache
 data/groq_cache/
+
+# Self-learning data
+data/learning/*.json
+tests/integration/data

@@ -3,9 +3,11 @@ from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from sqlalchemy.orm import Session 
 import time
 import asyncio
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 from src.api.models import *
 from src.database.models.base import get_db, SessionLocal
@@ -13,6 +15,7 @@ from src.database.models.vulnerability import Project, VulnerabilityPattern, Vul
 from src.database.operations import VulnerabilityDB
 from src.core.scanner_engine import EnhancedScannerEngine, quick_scan
 from src.core.config import settings
+from src.api.endpoints import learning
 import os
 
 # Lifespan context manager for startup/shutdown
@@ -55,6 +58,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(learning.router)
+
 # Exception handler
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
@@ -65,7 +71,7 @@ async def http_exception_handler(request, exc):
 
 # Health check endpoint
 @app.get("/health", response_model=HealthResponse, tags=["System"])
-async def health_check(db: SessionLocal = Depends(get_db)):
+async def health_check(db: Session = Depends(get_db)):
     """Check API health and system status"""
     try:
         # Test database connection
@@ -95,7 +101,7 @@ async def root():
 
 # Project endpoints
 @app.post("/api/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED, tags=["Projects"])
-async def create_project(project: ProjectCreate, db: SessionLocal = Depends(get_db)):
+async def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
     """Create a new project"""
     try:
         db_project = VulnerabilityDB.create_project(
@@ -114,7 +120,7 @@ async def list_projects(
     skip: int = 0,
     limit: int = 100,
     active_only: bool = True,
-    db: SessionLocal = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """List all projects"""
     query = db.query(Project)
@@ -125,7 +131,7 @@ async def list_projects(
     return [ProjectResponse.model_validate(p) for p in projects]
 
 @app.get("/api/projects/{project_id}", response_model=ProjectResponse, tags=["Projects"])
-async def get_project(project_id: int, db: SessionLocal = Depends(get_db)):
+async def get_project(project_id: int, db: Session = Depends(get_db)):
     """Get project details"""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -136,7 +142,7 @@ async def get_project(project_id: int, db: SessionLocal = Depends(get_db)):
 async def update_project(
     project_id: int,
     project_update: ProjectUpdate,
-    db: SessionLocal = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """Update project details"""
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -195,7 +201,7 @@ async def quick_code_scan(request: CodeScanRequest):
 async def start_scan(
     request: ScanRequest,
     background_tasks: BackgroundTasks,
-    db: SessionLocal = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """Start a full project scan"""
     # Verify project exists
@@ -259,7 +265,7 @@ async def list_vulnerabilities(
     status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
-    db: SessionLocal = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """List vulnerabilities with filters"""
     query = db.query(VulnerabilityDetection)
@@ -290,7 +296,7 @@ async def list_vulnerabilities(
 async def update_vulnerability(
     detection_id: str,
     update: VulnerabilityUpdate,
-    db: SessionLocal = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     """Update vulnerability status"""
     vuln = VulnerabilityDB.update_detection_status(
@@ -307,7 +313,7 @@ async def update_vulnerability(
 
 # Statistics endpoint
 @app.get("/api/projects/{project_id}/stats", tags=["Statistics"])
-async def get_project_stats(project_id: int, db: SessionLocal = Depends(get_db)):
+async def get_project_stats(project_id: int, db: Session = Depends(get_db)):
     """Get project vulnerability statistics"""
     stats = VulnerabilityDB.get_vulnerability_stats(db, project_id)
     
@@ -334,4 +340,3 @@ async def get_project_stats(project_id: int, db: SessionLocal = Depends(get_db))
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=settings.API_HOST, port=settings.API_PORT)
-
