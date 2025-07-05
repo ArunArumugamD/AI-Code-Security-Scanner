@@ -16,6 +16,7 @@ from src.database.operations import VulnerabilityDB
 from src.core.scanner_engine import EnhancedScannerEngine, quick_scan
 from src.core.config import settings
 from src.api.endpoints import learning
+from src.api.websocket.routes import router as websocket_router
 import os
 
 # Lifespan context manager for startup/shutdown
@@ -60,6 +61,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(learning.router)
+app.include_router(websocket_router)
 
 # Exception handler
 @app.exception_handler(HTTPException)
@@ -96,7 +98,9 @@ async def root():
         "message": "AISec Scanner API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
+        "websocket": "/ws", 
+        "websocket_demo": "Open websocket_demo.html in browser" 
     }
 
 # Project endpoints
