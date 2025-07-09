@@ -1,4 +1,4 @@
-﻿# src/analyzers/pattern_scanner.py
+﻿# src/analyzers/pattern_scanner.py - FIXED VERSION
 import re
 import asyncio
 from typing import List, Dict, Tuple
@@ -23,6 +23,12 @@ class PatternBasedScanner(BaseAnalyzer):
         try:
             self.patterns = db.query(VulnerabilityPattern).all()
             print(f"✓ Loaded {len(self.patterns)} vulnerability patterns from database")
+            
+            # Debug: Print loaded patterns
+            for p in self.patterns:
+                if p.pattern_id == "SQL-001":
+                    print(f"  SQL Pattern loaded: {p.detection_patterns}")
+                    
         finally:
             db.close()
     
@@ -36,6 +42,8 @@ class PatternBasedScanner(BaseAnalyzer):
             if language in p.languages
         ]
         
+        print(f"  Checking {len(relevant_patterns)} patterns for {language}")
+        
         # Split code into lines for line number tracking
         lines = code.split('\n')
         
@@ -43,15 +51,29 @@ class PatternBasedScanner(BaseAnalyzer):
             # Get regex patterns for this language
             regex_patterns = pattern.detection_patterns.get(language, [])
             
+            # Debug SQL pattern
+            if pattern.pattern_id == "SQL-001":
+                print(f"  SQL regex patterns for {language}: {regex_patterns}")
+            
             for regex_pattern in regex_patterns:
                 try:
-                    # Compile regex with case-insensitive flag
-                    regex = re.compile(regex_pattern, re.IGNORECASE | re.MULTILINE)
+                    # Fix regex pattern - ensure it's properly escaped
+                    # Don't use raw strings, use proper escaping
+                    if '\\(' in regex_pattern and not '\\\\(' in regex_pattern:
+                        regex_pattern = regex_pattern.replace('\\(', '\\\\(')
+                        regex_pattern = regex_pattern.replace('\\)', '\\\\)')
                     
-                    # Search through code
+                    # Compile regex
+                    regex = re.compile(regex_pattern, re.IGNORECASE)
+                    
+                    # Search through code line by line
                     for line_num, line in enumerate(lines, 1):
                         if regex.search(line):
-                            # Calculate confidence based on pattern match strength
+                            # Debug match
+                            if pattern.pattern_id == "SQL-001":
+                                print(f"  SQL pattern matched on line {line_num}: {line.strip()}")
+                            
+                            # Calculate confidence
                             confidence = self._calculate_confidence(
                                 line, regex_pattern, pattern
                             )
@@ -71,27 +93,29 @@ class PatternBasedScanner(BaseAnalyzer):
                                     fix_suggestion=self._get_fix_suggestion(pattern, language)
                                 )
                                 vulnerabilities.append(vuln)
+                                print(f"  Added vulnerability: {vuln.name} at line {line_num}")
                                 
                 except re.error as e:
                     print(f"Invalid regex pattern: {regex_pattern} - {e}")
         
+        print(f"  Pattern scanner found {len(vulnerabilities)} vulnerabilities")
         return vulnerabilities
     
     def _calculate_confidence(self, line: str, pattern: str, vuln_pattern: VulnerabilityPattern) -> float:
         """Calculate confidence score for a match"""
-        base_confidence = 0.7
+        base_confidence = 0.8  # Increased base confidence
         
         # Increase confidence for exact pattern matches
-        if pattern in line:
-            base_confidence += 0.2
+        if "+" in line and ("WHERE" in line.upper() or "SELECT" in line.upper()):
+            base_confidence += 0.15
         
         # Increase confidence for critical vulnerabilities
         if vuln_pattern.severity == 'critical':
-            base_confidence += 0.1
+            base_confidence += 0.05
         
         # Decrease confidence for comments
         if any(line.strip().startswith(comment) for comment in ['//', '#', '/*', '*']):
-            base_confidence -= 0.3
+            base_confidence -= 0.4
         
         return min(base_confidence, 1.0)
     

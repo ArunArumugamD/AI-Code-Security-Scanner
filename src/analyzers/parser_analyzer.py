@@ -1,4 +1,4 @@
-﻿# src/analyzers/parser_analyzer.py
+﻿# src/analyzers/parser_analyzer.py - FIXED VERSION
 from typing import List
 import asyncio
 from src.core.base_scanner import BaseAnalyzer, Vulnerability, Severity
@@ -24,18 +24,32 @@ class ParserBasedAnalyzer(BaseAnalyzer):
             self.parser.find_security_patterns, code, language
         )
         
+        # Debug: show what patterns were found
+        print(f"  AST Parser found {len(patterns)} security patterns")
+        
+        # Filter out false positives
+        filtered_patterns = []
         for pattern in patterns:
+            # Check if the pattern actually exists in the code
+            if pattern['pattern'] in pattern['code']:
+                filtered_patterns.append(pattern)
+                print(f"    Valid pattern: {pattern['pattern']} at line {pattern['line']}")
+            else:
+                print(f"    Filtered false positive: {pattern['pattern']} not in code")
+        
+        for pattern in filtered_patterns:
             vuln = Vulnerability(
                 id=f"PARSE-{language.upper()}-{pattern['line']:04d}",
-                name=f"Unsafe {pattern['pattern']} usage",
+                name=f"{pattern['pattern']} vulnerability",
                 description=pattern['risk'],
                 severity=Severity.HIGH if pattern['severity'] == 'high' else Severity.MEDIUM,
-                confidence=0.9,  # High confidence for direct pattern match
+                confidence=0.85,  # Reduced confidence slightly
                 file_path=file_path,
                 line_start=pattern['line'],
                 line_end=pattern['line'],
                 code_snippet=pattern['code'],
-                fix_suggestion=self._get_fix_suggestion(pattern['pattern'], language)
+                fix_suggestion=self._get_fix_suggestion(pattern['pattern'], language),
+                cwe_id=self._get_cwe_for_pattern(pattern['pattern'])
             )
             vulnerabilities.append(vuln)
         
@@ -60,6 +74,7 @@ class ParserBasedAnalyzer(BaseAnalyzer):
                 )
                 vulnerabilities.append(vuln)
         
+        print(f"  AST Parser returning {len(vulnerabilities)} vulnerabilities")
         return vulnerabilities
     
     def _get_fix_suggestion(self, pattern: str, language: str) -> str:
@@ -70,6 +85,20 @@ class ParserBasedAnalyzer(BaseAnalyzer):
             'innerHTML': 'Use textContent or sanitize input with DOMPurify',
             'strcpy': 'Use strncpy() or snprintf() with bounds checking',
             'gets': 'Use fgets() with buffer size limit',
-            'system': 'Use subprocess with shell=False or execve() family functions'
+            'system': 'Use subprocess with shell=False or execve() family functions',
+            'execute': 'Use parameterized queries instead of string concatenation',
+            'SELECT': 'Use parameterized queries to prevent SQL injection'
         }
         return suggestions.get(pattern, "Review and sanitize all user inputs")
+    
+    def _get_cwe_for_pattern(self, pattern: str) -> str:
+        """Map patterns to CWE IDs"""
+        cwe_map = {
+            'eval': 'CWE-95',
+            'exec': 'CWE-78',
+            'innerHTML': 'CWE-79',
+            'system': 'CWE-78',
+            'execute': 'CWE-89',
+            'SELECT': 'CWE-89'
+        }
+        return cwe_map.get(pattern, 'CWE-Unknown')

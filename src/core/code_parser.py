@@ -1,9 +1,10 @@
-﻿# src/core/code_parser.py
+﻿# src/core/code_parser.py - COMPLETE FIXED VERSION
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import tree_sitter_languages as tsl
 from tree_sitter import Node
 import hashlib
+import re
 
 @dataclass
 class CodeNode:
@@ -208,6 +209,7 @@ class UniversalCodeParser:
                 'eval': 'Code injection risk',
                 'exec': 'Code injection risk', 
                 'os.system': 'Command injection risk',
+                'subprocess.call': 'Command injection risk if shell=True',
                 'pickle.loads': 'Deserialization vulnerability',
                 '__import__': 'Dynamic import security risk'
             },
@@ -245,25 +247,44 @@ class UniversalCodeParser:
             }
         }
         
-        # Search for patterns
-        self._find_patterns_recursive(ast, patterns, unsafe_patterns.get(language, {}), language)
+        # Get patterns for this language
+        lang_patterns = unsafe_patterns.get(language, {})
+        
+        # Search for patterns in the actual code text
+        lines = code.split('\n')
+        for line_num, line in enumerate(lines, 1):
+            # Skip comments
+            if language == 'python' and line.strip().startswith('#'):
+                continue
+            if language in ['javascript', 'java', 'c', 'cpp'] and line.strip().startswith('//'):
+                continue
+                
+            # Check each pattern
+            for pattern, risk in lang_patterns.items():
+                # For execute patterns, check if it's actually a database execute
+                if pattern == 'exec' and language == 'python':
+                    # Check if this is actually exec() function, not db.execute()
+                    if re.search(r'\bexec\s*\(', line) and not re.search(r'\.\s*execute\s*\(', line):
+                        patterns.append({
+                            'pattern': pattern,
+                            'risk': risk,
+                            'line': line_num,
+                            'code': line.strip(),
+                            'severity': 'high'
+                        })
+                elif pattern in line and pattern != 'exec':  # Avoid false positives for exec
+                    # Additional checks for specific patterns
+                    if pattern == 'subprocess.call' and 'shell=True' not in line:
+                        continue  # Only flag if shell=True
+                    if pattern == 'eval' and not re.search(r'\beval\s*\(', line):
+                        continue  # Only flag actual eval() calls
+                        
+                    patterns.append({
+                        'pattern': pattern,
+                        'risk': risk,
+                        'line': line_num,
+                        'code': line.strip(),
+                        'severity': 'high' if 'injection' in risk else 'medium'
+                    })
         
         return patterns
-    
-    def _find_patterns_recursive(self, node: CodeNode, patterns: List[Dict], 
-                                unsafe_dict: Dict[str, str], language: str):
-        """Recursively search for unsafe patterns"""
-        # Check if node text contains any unsafe pattern
-        for pattern, risk in unsafe_dict.items():
-            if pattern in node.text and len(node.text) < 200:  # Avoid large blocks
-                patterns.append({
-                    'pattern': pattern,
-                    'risk': risk,
-                    'line': node.start_line,
-                    'code': node.text.strip(),
-                    'severity': 'high' if 'injection' in risk else 'medium'
-                })
-        
-        # Recurse
-        for child in node.children:
-            self._find_patterns_recursive(child, patterns, unsafe_dict, language)
