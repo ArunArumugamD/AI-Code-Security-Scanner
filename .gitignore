@@ -71,3 +71,23 @@ data/groq_cache/
 # Self-learning data
 data/learning/*.json
 tests/integration/data
+
+comprehensive_verification.py
+debug_scanner.py
+debug_websocket.py
+fix_all_patterns.py
+fix_fstring_pattern.py
+quick_verify.py
+test_websocket_client.py
+test_websocket_examples.py
+test_websocket_fix.py
+test_websocket_improved.py
+update_patterns.py
+update_sql_patterns.py
+test_code_graph.png
+test_examples.html
+test_final_fix.py
+test_parser_fix.py
+test_setup.py
+final_verify.py
+fix_regex_patterns.py
