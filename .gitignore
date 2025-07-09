@@ -91,3 +91,4 @@ test_parser_fix.py
 test_setup.py
 final_verify.py
 fix_regex_patterns.py
+fix_regex_final.py
