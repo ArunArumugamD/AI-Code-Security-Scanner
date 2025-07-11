@@ -92,3 +92,6 @@ test_setup.py
 final_verify.py
 fix_regex_patterns.py
 fix_regex_final.py
+test_live_scanner.py
+fix_all_regex_patterns.py
+fix_database_patterns.py
