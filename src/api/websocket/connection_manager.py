@@ -170,124 +170,27 @@ class ConnectionManager:
             await self.disconnect(client_id)
     
     async def handle_code_update(self, client_id: str, data: dict):
-        """Handle code update from client (with throttling)"""
+        """Handle code update with live scanning"""
         code = data.get("code", "")
         file_path = data.get("file_path", "untitled")
         language = data.get("language", "python")
         
-        # Create session key
-        session_key = f"{client_id}:{file_path}"
-        
-        # Cancel existing scan task if any
-        if session_key in self.scan_sessions:
-            session = self.scan_sessions[session_key]
-            if session.scan_task and not session.scan_task.done():
-                session.scan_task.cancel()
-        
-        # Create or update session
-        session = ScanSession(
-            session_id=session_key,
-            client_id=client_id,
-            file_path=file_path,
-            language=language,
-            last_scan=datetime.utcnow(),
-            pending_scan=True
-        )
-        
-        # Schedule scan with delay (debouncing)
-        scan_task = asyncio.create_task(
-            self._delayed_scan(session, code, self.scan_delay)
-        )
-        session.scan_task = scan_task
-        
-        self.scan_sessions[session_key] = session
+        # Import live scanner
+        from src.api.websocket.live_scanner import live_scanner
         
         # Send acknowledgment
         await self.send_personal_message({
             "type": "code_update_received",
-            "status": "scanning_scheduled",
+            "status": "processing",
             "file_path": file_path,
             "code_length": len(code)
         }, client_id)
-    
-    async def _delayed_scan(self, session: ScanSession, code: str, delay: float):
-        """Perform scan after delay (for debouncing)"""
-        try:
-            # Wait for delay (will be cancelled if new update comes)
-            await asyncio.sleep(delay)
-            
-            # Perform scan
-            await self.perform_scan(session, code)
-            
-        except asyncio.CancelledError:
-            # Scan was cancelled (new update arrived)
-            logger.debug(f"Scan cancelled for {session.file_path}")
-    
-    async def perform_scan(self, session: ScanSession, code: str):
-        """Perform actual vulnerability scan"""
-        from src.core.scanner_engine import quick_scan
         
-        start_time = datetime.utcnow()
-        client_id = session.client_id
+        # Use live scanner for incremental analysis
+        await live_scanner.handle_live_code(client_id, file_path, code, language)
         
-        try:
-            # Send scan started message
-            await self.send_personal_message({
-                "type": "scan_started",
-                "file_path": session.file_path,
-                "timestamp": start_time.isoformat()
-            }, client_id)
-            
-            # Perform scan
-            vulnerabilities = await quick_scan(code, session.language)
-            
-            # Calculate scan time
-            scan_time = (datetime.utcnow() - start_time).total_seconds()
-            
-            # Prepare vulnerability data
-            vuln_data = []
-            for vuln in vulnerabilities:
-                vuln_data.append({
-                    "id": vuln.id,
-                    "name": vuln.name,
-                    "description": vuln.description,
-                    "severity": vuln.severity.value,
-                    "confidence": vuln.confidence,
-                    "line_start": vuln.line_start,
-                    "line_end": vuln.line_end,
-                    "code_snippet": vuln.code_snippet[:100],  # Limit size
-                    "fix_suggestion": vuln.fix_suggestion,
-                    "ai_explanation": vuln.ai_explanation[:200] if vuln.ai_explanation else None
-                })
-            
-            # Send results
-            await self.send_personal_message({
-                "type": "scan_completed",
-                "file_path": session.file_path,
-                "scan_time": scan_time,
-                "vulnerabilities": vuln_data,
-                "summary": {
-                    "total": len(vulnerabilities),
-                    "critical": sum(1 for v in vulnerabilities if v.severity.value == "critical"),
-                    "high": sum(1 for v in vulnerabilities if v.severity.value == "high"),
-                    "medium": sum(1 for v in vulnerabilities if v.severity.value == "medium"),
-                    "low": sum(1 for v in vulnerabilities if v.severity.value == "low")
-                }
-            }, client_id)
-            
-            # Update stats
-            self.stats["scans_performed"] += 1
-            
-            # Update session
-            session.pending_scan = False
-            
-        except Exception as e:
-            logger.error(f"Error during scan: {e}")
-            await self.send_personal_message({
-                "type": "scan_error",
-                "error": str(e),
-                "file_path": session.file_path
-            }, client_id)
+        # Update stats
+        self.stats["scans_performed"] += 1
     
     async def cancel_client_scans(self, client_id: str):
         """Cancel all pending scans for a client"""
