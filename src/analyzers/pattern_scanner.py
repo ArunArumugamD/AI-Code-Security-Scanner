@@ -1,4 +1,4 @@
-﻿# src/analyzers/pattern_scanner.py - FIXED VERSION
+﻿# src/analyzers/pattern_scanner.py - COMPLETE FIXED VERSION
 import re
 import asyncio
 from typing import List, Dict, Tuple
@@ -32,6 +32,28 @@ class PatternBasedScanner(BaseAnalyzer):
         finally:
             db.close()
     
+    def _fix_regex_pattern(self, pattern: str) -> str:
+        """Fix common regex pattern issues"""
+        # Remove double backslashes before parentheses
+        pattern = pattern.replace('\\\\(', r'\(').replace('\\\\)', r'\)')
+        pattern = pattern.replace('\\(', r'\(').replace('\\)', r'\)')
+        
+        # Fix specific problematic patterns
+        if pattern == r"os\.system\s*\\(":
+            return r"os\.system\s*\("
+        elif pattern == r"\beval\s*\\(":
+            return r"\beval\s*\("
+        elif pattern == r"\bexec\s*\\(":
+            return r"\bexec\s*\("
+        elif pattern == r"os\.popen\s*\\(":
+            return r"os\.popen\s*\("
+            
+        # Fix subprocess patterns
+        if "subprocess" in pattern and "\\(" in pattern:
+            pattern = pattern.replace("\\(", r"\(")
+            
+        return pattern
+    
     async def analyze(self, code: str, language: str, file_path: str) -> List[Vulnerability]:
         """Analyze code using regex patterns"""
         vulnerabilities = []
@@ -57,25 +79,34 @@ class PatternBasedScanner(BaseAnalyzer):
             
             for regex_pattern in regex_patterns:
                 try:
-                    # Fix regex pattern - ensure it's properly escaped
-                    # Don't use raw strings, use proper escaping
-                    if '\\(' in regex_pattern and not '\\\\(' in regex_pattern:
-                        regex_pattern = regex_pattern.replace('\\(', '\\\\(')
-                        regex_pattern = regex_pattern.replace('\\)', '\\\\)')
+                    # Fix the regex pattern
+                    fixed_pattern = self._fix_regex_pattern(regex_pattern)
                     
                     # Compile regex
-                    regex = re.compile(regex_pattern, re.IGNORECASE)
+                    regex = re.compile(fixed_pattern, re.IGNORECASE | re.MULTILINE)
                     
                     # Search through code line by line
                     for line_num, line in enumerate(lines, 1):
+                        # Skip empty lines and comments
+                        stripped_line = line.strip()
+                        if not stripped_line:
+                            continue
+                            
+                        # Skip comment lines
+                        if language == 'python' and stripped_line.startswith('#'):
+                            continue
+                        if language in ['javascript', 'java', 'c', 'cpp'] and stripped_line.startswith('//'):
+                            continue
+                            
+                        # Search for pattern
                         if regex.search(line):
                             # Debug match
-                            if pattern.pattern_id == "SQL-001":
-                                print(f"  SQL pattern matched on line {line_num}: {line.strip()}")
+                            if pattern.pattern_id in ["SQL-001", "CMD-001", "EVAL-001", "EXEC-001"]:
+                                print(f"  {pattern.pattern_id} matched on line {line_num}: {line.strip()}")
                             
                             # Calculate confidence
                             confidence = self._calculate_confidence(
-                                line, regex_pattern, pattern
+                                line, fixed_pattern, pattern
                             )
                             
                             if confidence >= pattern.confidence_threshold:
@@ -94,20 +125,90 @@ class PatternBasedScanner(BaseAnalyzer):
                                 )
                                 vulnerabilities.append(vuln)
                                 print(f"  Added vulnerability: {vuln.name} at line {line_num}")
+                                # Don't break - continue checking other lines
                                 
                 except re.error as e:
-                    print(f"Invalid regex pattern: {regex_pattern} - {e}")
+                    print(f"Regex error for pattern '{regex_pattern}': {e}")
+                    # Try a simpler pattern
+                    try:
+                        # For os.system, eval, exec - just look for the function name
+                        if "os.system" in regex_pattern:
+                            simple_regex = re.compile(r"os\.system\s*\(", re.IGNORECASE)
+                            for line_num, line in enumerate(lines, 1):
+                                if simple_regex.search(line):
+                                    vuln = Vulnerability(
+                                        id=f"OSYS-001-{file_path}-{line_num}",
+                                        name="Unsafe os.system usage",
+                                        description="os.system is unsafe for executing system commands",
+                                        severity=Severity.HIGH,
+                                        confidence=0.9,
+                                        file_path=file_path,
+                                        line_start=line_num,
+                                        line_end=line_num,
+                                        code_snippet=line.strip(),
+                                        cwe_id="CWE-78",
+                                        fix_suggestion="Use subprocess.run with shell=False instead"
+                                    )
+                                    vulnerabilities.append(vuln)
+                                    print(f"  Added os.system vulnerability at line {line_num}")
+                                    
+                        elif "eval" in regex_pattern and "\\b" in regex_pattern:
+                            simple_regex = re.compile(r"\beval\s*\(", re.IGNORECASE)
+                            for line_num, line in enumerate(lines, 1):
+                                if simple_regex.search(line):
+                                    vuln = Vulnerability(
+                                        id=f"EVAL-001-{file_path}-{line_num}",
+                                        name="Unsafe eval usage",
+                                        description="eval() can execute arbitrary code",
+                                        severity=Severity.HIGH,
+                                        confidence=0.9,
+                                        file_path=file_path,
+                                        line_start=line_num,
+                                        line_end=line_num,
+                                        code_snippet=line.strip(),
+                                        cwe_id="CWE-94",
+                                        fix_suggestion="Use ast.literal_eval() or JSON.parse() instead"
+                                    )
+                                    vulnerabilities.append(vuln)
+                                    print(f"  Added eval vulnerability at line {line_num}")
+                                    
+                        elif "exec" in regex_pattern and "\\b" in regex_pattern:
+                            simple_regex = re.compile(r"\bexec\s*\(", re.IGNORECASE)
+                            for line_num, line in enumerate(lines, 1):
+                                if simple_regex.search(line):
+                                    vuln = Vulnerability(
+                                        id=f"EXEC-001-{file_path}-{line_num}",
+                                        name="Unsafe exec usage",
+                                        description="exec() can execute arbitrary Python code",
+                                        severity=Severity.HIGH,
+                                        confidence=0.9,
+                                        file_path=file_path,
+                                        line_start=line_num,
+                                        line_end=line_num,
+                                        code_snippet=line.strip(),
+                                        cwe_id="CWE-94",
+                                        fix_suggestion="Avoid exec() or strictly validate input"
+                                    )
+                                    vulnerabilities.append(vuln)
+                                    print(f"  Added exec vulnerability at line {line_num}")
+                    except:
+                        pass
         
         print(f"  Pattern scanner found {len(vulnerabilities)} vulnerabilities")
         return vulnerabilities
     
     def _calculate_confidence(self, line: str, pattern: str, vuln_pattern: VulnerabilityPattern) -> float:
         """Calculate confidence score for a match"""
-        base_confidence = 0.8  # Increased base confidence
+        base_confidence = 0.8
         
         # Increase confidence for exact pattern matches
         if "+" in line and ("WHERE" in line.upper() or "SELECT" in line.upper()):
             base_confidence += 0.15
+        
+        # Increase confidence for f-strings with SQL
+        if "f\"" in line or "f'" in line:
+            if any(sql in line.upper() for sql in ["SELECT", "INSERT", "UPDATE", "DELETE"]):
+                base_confidence += 0.1
         
         # Increase confidence for critical vulnerabilities
         if vuln_pattern.severity == 'critical':
