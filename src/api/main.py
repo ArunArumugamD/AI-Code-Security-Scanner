@@ -17,6 +17,7 @@ from src.core.scanner_engine import EnhancedScannerEngine, quick_scan
 from src.core.config import settings
 from src.api.endpoints import learning
 from src.api.websocket.routes import router as websocket_router
+from src.api.endpoints import distributed
 import os
 
 # Lifespan context manager for startup/shutdown
@@ -62,6 +63,7 @@ app.add_middleware(
 # Include routers
 app.include_router(learning.router)
 app.include_router(websocket_router)
+app.include_router(distributed.router)
 
 # Exception handler
 @app.exception_handler(HTTPException)
