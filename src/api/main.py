@@ -18,6 +18,7 @@ from src.core.config import settings
 from src.api.endpoints import learning
 from src.api.websocket.routes import router as websocket_router
 from src.api.endpoints import distributed
+from src.api.endpoints import analytics
 import os
 
 # Lifespan context manager for startup/shutdown
@@ -64,6 +65,7 @@ app.add_middleware(
 app.include_router(learning.router)
 app.include_router(websocket_router)
 app.include_router(distributed.router)
+app.include_router(analytics.router)
 
 # Exception handler
 @app.exception_handler(HTTPException)
