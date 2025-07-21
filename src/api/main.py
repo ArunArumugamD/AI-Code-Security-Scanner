@@ -1,4 +1,4 @@
-﻿# src/api/main.py
+# src/api/main.py
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -19,13 +19,14 @@ from src.api.endpoints import learning
 from src.api.websocket.routes import router as websocket_router
 from src.api.endpoints import distributed
 from src.api.endpoints import analytics
+from src.ml.zero_day_detector import router as zero_day_router
 import os
 
 # Lifespan context manager for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print("🚀 Starting AISec Scanner API...")
+    print("?? Starting AISec Scanner API...")
     
     # Initialize database
     from src.database.models.base import init_db
@@ -37,12 +38,12 @@ async def lifespan(app: FastAPI):
     db.close()
     
     app.state.pattern_count = pattern_count
-    print(f"✓ Loaded {pattern_count} vulnerability patterns")
+    print(f"? Loaded {pattern_count} vulnerability patterns")
     
     yield
     
     # Shutdown
-    print("👋 Shutting down AISec Scanner API...")
+    print("?? Shutting down AISec Scanner API...")
 
 # Create FastAPI app
 app = FastAPI(
@@ -66,6 +67,7 @@ app.include_router(learning.router)
 app.include_router(websocket_router)
 app.include_router(distributed.router)
 app.include_router(analytics.router)
+app.include_router(zero_day_router)
 
 # Exception handler
 @app.exception_handler(HTTPException)
@@ -348,3 +350,4 @@ async def get_project_stats(project_id: int, db: Session = Depends(get_db)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=settings.API_HOST, port=settings.API_PORT)
+
