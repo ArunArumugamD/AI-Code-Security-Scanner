@@ -2,6 +2,14 @@
 
 Enterprise-grade AI-powered code security scanner combining Graph Neural Networks and CodeBERT for unprecedented vulnerability detection accuracy.
 
+![alt text](image.png)
+
+
+![alt text](image-1.png)
+
+
+![alt text](image-2.png)
+
 ## 🚀 Key Features
 
 - **Hybrid AI Engine**: GNN + CodeBERT achieving 92% accuracy
