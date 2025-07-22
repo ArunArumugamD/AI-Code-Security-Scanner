@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureCode AI - ML Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-card: #1a1a1a;
+            --text-primary: #00ff41;
+            --text-white: #ffffff;
+            --text-light: #e0e0e0;
+            --text-dim: #808080;
+            --accent: #00ff41;
+            --danger: #ff0040;
+            --warning: #ffaa00;
+            --border: #00ff4133;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            background: var(--bg-primary);
+            color: var(--text-white);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(transparent 50%, rgba(0, 255, 65, 0.03) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 30px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-white);
+        }
+
+        .logo::before {
+            content: "🔒";
+            font-size: 30px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+        }
+
+        .header-stat {
+            text-align: center;
+        }
+
+        .header-stat-value {
+            font-size: 24px;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .header-stat-label {
+            color: var(--text-dim);
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .full-width {
+                grid-column: 1;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-white);
+        }
+
+        .card-badge {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 4px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Model Performance Grid */
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .model-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .model-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .model-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--text-white);
+        }
+
+        .model-accuracy {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .model-metric {
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        /* Learning Progress */
+        .progress-bar {
+            background: var(--bg-secondary);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--text-primary));
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--bg-primary);
+            font-weight: bold;
+        }
+
+        /* Stats List */
+        .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            color: var(--text-light);
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        /* Chart containers */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        /* Vulnerability type breakdown */
+        .vuln-type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .vuln-type-item {
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .vuln-type-name {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 5px;
+        }
+
+        .vuln-type-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--text-white);
+        }
+
+        /* Zero-day insights */
+        .zero-day-alert {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--warning);
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .zero-day-title {
+            color: var(--warning);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        /* Time series */
+        .time-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        /* Loading animation */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--bg-secondary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-stats {
+                display: none;
+            }
+            
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                SecureCode AI - ML Analytics
+            </div>
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-value" id="totalScans">0</div>
+                    <div class="header-stat-label">Total Scans</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-value" id="avgAccuracy">0%</div>
+                    <div class="header-stat-label">Avg Accuracy</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-value" id="patternsLearned">0</div>
+                    <div class="header-stat-label">Patterns Learned</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Model Performance -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">AI Model Performance</h2>
+                    <span class="card-badge">LIVE</span>
+                </div>
+                <div class="model-grid">
+                    <div class="model-card">
+                        <div class="model-name">Pattern Scanner</div>
+                        <div class="model-accuracy">82%</div>
+                        <div class="model-metric">12ms avg</div>
+                    </div>
+                    <div class="model-card">
+                        <div class="model-name">CodeBERT</div>
+                        <div class="model-accuracy">89%</div>
+                        <div class="model-metric">120ms avg</div>
+                    </div>
+                    <div class="model-card">
+                        <div class="model-name">GNN</div>
+                        <div class="model-accuracy">85%</div>
+                        <div class="model-metric">200ms avg</div>
+                    </div>
+                    <div class="model-card">
+                        <div class="model-name">Hybrid AI</div>
+                        <div class="model-accuracy">92%</div>
+                        <div class="model-metric">180ms avg</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Self-Learning Progress -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Self-Learning Progress</h2>
+                </div>
+                <div class="stats-list">
+                    <div>
+                        <div class="time-label">Accuracy Improvement (30 days)</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 73%">+7.3%</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">True Positives</span>
+                        <span class="stat-value">2,847</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">False Positives</span>
+                        <span class="stat-value">142</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Patterns Learned</span>
+                        <span class="stat-value">67</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detection Accuracy Chart -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <h2 class="card-title">Detection Accuracy by Vulnerability Type</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="accuracyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Vulnerability Trends -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Vulnerability Detection Trends</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Zero-Day Detection -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Zero-Day Pattern Detection</h2>
+                </div>
+                <div class="zero-day-alert">
+                    <div class="zero-day-title">⚠️ Anomalous Pattern Detected</div>
+                    <div>New SQL injection variant discovered with 87% confidence</div>
+                    <div style="font-size: 14px; color: var(--text-dim); margin-top: 5px;">
+                        Pattern ID: ZERO-DAY-20250122154823
+                    </div>
+                </div>
+                <div class="vuln-type-grid">
+                    <div class="vuln-type-item">
+                        <div class="vuln-type-name">Candidates</div>
+                        <div class="vuln-type-count">12</div>
+                    </div>
+                    <div class="vuln-type-item">
+                        <div class="vuln-type-name">Confirmed</div>
+                        <div class="vuln-type-count">3</div>
+                    </div>
+                    <div class="vuln-type-item">
+                        <div class="vuln-type-name">This Week</div>
+                        <div class="vuln-type-count">5</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Language Distribution -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <h2 class="card-title">Vulnerability Distribution by Language</h2>
+                </div>
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="languageChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Confidence Score Distribution -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Confidence Score Distribution</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Real-time Performance -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Real-Time Performance</h2>
+                </div>
+                <div class="stats-list">
+                    <div class="stat-item">
+                        <span class="stat-label">WebSocket Connections</span>
+                        <span class="stat-value" id="wsConnections">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Scans/Minute</span>
+                        <span class="stat-value" id="scansPerMin">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Avg Response Time</span>
+                        <span class="stat-value" id="avgResponse">0ms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart.js configuration
+        Chart.defaults.color = '#e0e0e0';
+        Chart.defaults.borderColor = '#00ff4133';
+        Chart.defaults.font.family = "'JetBrains Mono', monospace";
+
+        // Initialize charts
+        function initCharts() {
+            // Accuracy by vulnerability type
+            const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+            new Chart(accuracyCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['SQL Injection', 'XSS', 'Command Injection', 'Path Traversal', 'Deserialization'],
+                    datasets: [{
+                        label: 'Detection Accuracy %',
+                        data: [95, 88, 92, 84, 90],
+                        backgroundColor: '#00ff41',
+                        borderColor: '#00ff41',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: '#00ff4133'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Trends chart
+            const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+            new Chart(trendsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Critical',
+                        data: [12, 15, 8, 10],
+                        borderColor: '#ff0040',
+                        backgroundColor: 'rgba(255, 0, 64, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'High',
+                        data: [25, 30, 22, 28],
+                        borderColor: '#ffaa00',
+                        backgroundColor: 'rgba(255, 170, 0, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Medium',
+                        data: [45, 48, 42, 50],
+                        borderColor: '#00ff41',
+                        backgroundColor: 'rgba(0, 255, 65, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            grid: {
+                                color: '#00ff4133'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Language distribution
+            const languageCtx = document.getElementById('languageChart').getContext('2d');
+            new Chart(languageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Python', 'JavaScript', 'Java', 'PHP', 'C/C++'],
+                    datasets: [{
+                        data: [35, 28, 20, 12, 5],
+                        backgroundColor: [
+                            '#00ff41',
+                            '#00cc33',
+                            '#00aa2a',
+                            '#008821',
+                            '#006618'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+
+            // Confidence distribution
+            const confidenceCtx = document.getElementById('confidenceChart').getContext('2d');
+            new Chart(confidenceCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%'],
+                    datasets: [{
+                        label: 'Detection Count',
+                        data: [5, 12, 25, 180, 420],
+                        borderColor: '#00ff41',
+                        backgroundColor: 'rgba(0, 255, 65, 0.2)',
+                        pointBackgroundColor: '#00ff41'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            grid: {
+                                color: '#00ff4133'
+                            },
+                            angleLines: {
+                                color: '#00ff4133'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update real-time stats
+        function updateRealTimeStats() {
+            // Simulate real-time updates
+            document.getElementById('wsConnections').textContent = Math.floor(Math.random() * 10) + 5;
+            document.getElementById('scansPerMin').textContent = Math.floor(Math.random() * 50) + 100;
+            document.getElementById('avgResponse').textContent = Math.floor(Math.random() * 50) + 150 + 'ms';
+            
+            // Update header stats
+            document.getElementById('totalScans').textContent = '12,847';
+            document.getElementById('avgAccuracy').textContent = '91.3%';
+            document.getElementById('patternsLearned').textContent = '67';
+        }
+
+        // Fetch real data (when API is connected)
+        async function fetchMLData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/analytics/ml/performance');
+                const data = await response.json();
+                console.log('ML Performance data:', data);
+                // Update UI with real data
+            } catch (error) {
+                console.log('Using demo data - API not connected');
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            updateRealTimeStats();
+            fetchMLData();
+            
+            // Simulate real-time updates
+            setInterval(updateRealTimeStats, 5000);
+        });
+    </script>
+</body>
+</html>
