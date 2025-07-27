@@ -98,3 +98,4 @@ fix_database_patterns.py
 generate_test_data.py
 test_zero_day.py
 data/zero_day/zero_day_candidates.json
+dataset_collector.py

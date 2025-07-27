@@ -1,0 +1,35 @@
+{
+  "model": {
+    "num_node_features": 62,
+    "num_edge_features": 8,
+    "hidden_dim": 256,
+    "num_classes": 2,
+    "num_vuln_types": 10
+  },
+  "training": {
+    "batch_size": 32,
+    "learning_rate": 0.001,
+    "weight_decay": 1e-05,
+    "epochs": 200,
+    "patience": 20,
+    "validation_split": 0.2
+  },
+  "dataset": {
+    "min_samples": 1000,
+    "languages": [
+      "c",
+      "java"
+    ],
+    "cwe_types": [
+      "CWE-120",
+      "CWE-89",
+      "CWE-78",
+      "CWE-134",
+      "CWE-476",
+      "CWE-415",
+      "CWE-401",
+      "CWE-190",
+      "CWE-22"
+    ]
+  }
+}
